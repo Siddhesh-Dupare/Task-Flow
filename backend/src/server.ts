@@ -1,12 +1,43 @@
 import express, { Express, Request, Response } from 'express';
+import dotenv from "dotenv";
+import cors from "cors";
+
+import pool from './database.js';
+
+import 'dotenv/config';
+import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
+
+import { usersTable } from './tables/tables.js';
+import apiRoutes from "./routes/api.route.js";
+dotenv.config();
 
 const app: Express = express();
-const port: number = 3000;
+
+// Middleware
+app.use(cors({
+    origin: 'http://localhost:5173'
+}));
+
+app.use(express.json());
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello from TypeScript Backend! 👋');
 });
 
-app.listen(port, () => {
-  console.log(`🚀 Server is running at http://localhost:${port}`);
-});
+
+app.use('/api', apiRoutes);
+
+const startServer = async () => {
+    try {
+        await usersTable();
+
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`Server is running on http://localhost:${PORT}`);
+        });
+    } catch (err) {
+        console.log('Failed to start server', err);
+    }
+};
+
+startServer();

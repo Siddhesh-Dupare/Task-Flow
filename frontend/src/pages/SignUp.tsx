@@ -5,14 +5,20 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 
 import { GoogleIcon, GithubIcon } from "@/assets/IconSVG";
+
+import { useNavigate } from "react-router";
+import { useState } from "react";
 
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from 'react-router';
 
 import { useForm } from "react-hook-form";
+
+import { Loader2 } from "lucide-react";
 
 import Logo from "/logo.svg";
 
@@ -22,6 +28,11 @@ const formSchema = z.object({
 
 const SignUp = () => {
 
+    const navigate = useNavigate();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const google_auth_url = 'http://localhost:3000/auth/google';
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -29,8 +40,36 @@ const SignUp = () => {
         }
     });
 
-    const onSubmit = (values: z.infer<typeof formSchema>) => {
+    const onSubmit = async (values: z.infer<typeof formSchema>) => {
         console.log({ values });
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/api/create-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ values }),
+            });
+
+            const responseText = await response.text();
+            
+            if (!response.ok) {
+
+                if (response.status === 409) {
+                    toast.warning(`${values.email} already exists! Try Login`);
+                }
+
+                throw new Error(responseText);
+            }
+
+            navigate("/verification")
+            toast.success(`${values.email} created successfully`);
+        } catch (error) {
+            console.error("Registration failed: ", error);
+            setIsLoading(false);
+        }
     }
 
     return (
@@ -62,13 +101,24 @@ const SignUp = () => {
                                             <FormControl>
                                                 <div className="flex justify-between items-center gap-2">
                                                     <Input {...field} type="email" placeholder="example@gmail.com" />
-                                                    <Button variant="outline">Sign Up</Button>
+                                                    {/* <Button variant="outline">Sign Up</Button> */}
+                                                    <Button type="submit" disabled={isLoading}>
+                                                        {isLoading ? (
+                                                            <>
+                                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                                Signing Up...
+                                                            </>
+                                                        ) : (
+                                                            "Sign Up"
+                                                        )}
+                                                    </Button>
                                                 </div>
                                             </FormControl>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
+
                             </form>
                         </Form>
 
@@ -86,7 +136,7 @@ const SignUp = () => {
 
                         <div className="w-full max-w-xs p-4 m-auto">
                             <div className="grid grid-cols-2 gap-3">
-                                <SocialButton icon={<GoogleIcon />} text="Google" auth={"googleUrl"} />
+                                <SocialButton icon={<GoogleIcon />} text="Google" auth={ google_auth_url } />
                                 <SocialButton icon={<GithubIcon />} text="Github" auth={"githubUrl"} />
                             </div>
                         </div>
