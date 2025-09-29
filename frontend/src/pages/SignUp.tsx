@@ -22,6 +22,8 @@ import { Loader2 } from "lucide-react";
 
 import Logo from "/logo.svg";
 
+import { useAuth } from "@/hooks/AuthContext";
+
 const formSchema = z.object({
     email: z.email({ message: "Invalid email address" })
 });
@@ -30,6 +32,7 @@ const SignUp = () => {
 
     const navigate = useNavigate();
     const [isLoading, setIsLoading] = useState(false);
+    const { setEmail } = useAuth();
 
     const google_auth_url = 'http://localhost:3000/auth/google';
 
@@ -64,6 +67,7 @@ const SignUp = () => {
                 throw new Error(responseText);
             }
 
+            setEmail(values.email);
             navigate("/verification")
             toast.success(`${values.email} created successfully`);
         } catch (error) {
@@ -118,7 +122,6 @@ const SignUp = () => {
                                         </FormItem>
                                     )}
                                 />
-
                             </form>
                         </Form>
 
