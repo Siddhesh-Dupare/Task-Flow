@@ -5,7 +5,6 @@ import crypto from "crypto";
 
 import pool from "../database.js";
 
-
 const router = Router();
 
 function generate6DigitNumber() {
@@ -83,5 +82,6 @@ router.post('/create-user', async (req: Request, res: Response) => {
         res.status(500).send('Server Error');
     }
 });
+
 
 export default router;
