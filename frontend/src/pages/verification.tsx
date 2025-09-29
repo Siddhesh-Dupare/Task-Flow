@@ -9,8 +9,11 @@ import { Link } from 'react-router';
 import z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAuth } from "@/hooks/AuthContext";
 
 const Verification = () => {
+
+    const { email } = useAuth();
 
     return (
         <>
@@ -27,7 +30,7 @@ const Verification = () => {
                                 We've emailed you a code
                             </CardTitle>
                             <CardDescription>
-                                To complete your account setup, enter the code we sent to:<br/>
+                                To complete your account setup, enter the code we sent to:<br/><b>{ email }</b> 
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="flex justify-center">
