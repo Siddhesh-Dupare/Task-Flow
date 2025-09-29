@@ -2,10 +2,7 @@ import express, { Express, Request, Response } from 'express';
 import dotenv from "dotenv";
 import cors from "cors";
 
-import pool from './database.js';
-
 import 'dotenv/config';
-import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
 import { usersTable } from './tables/tables.js';
 import apiRoutes from "./routes/api.route.js";

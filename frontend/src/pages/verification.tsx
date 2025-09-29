@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem } from "@/components/ui/form";
 import { InputOTP, InputOTPGroup, InputOTPSeparator, InputOTPSlot} from "@/components/ui/input-otp"
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import Logo from "/logo.svg";
 import { Link } from 'react-router';
@@ -10,6 +11,11 @@ import z from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/AuthContext";
+
+import { useState } from "react";
+import { useNavigate } from "react-router";
+
+import { Loader2 } from "lucide-react";
 
 const Verification = () => {
 
@@ -63,6 +69,10 @@ const formSchema = z.object({
 
 function OTPInput() {
 
+    const { email } = useAuth();
+    const [isLoading, setIsLoading] = useState(false);
+    const navigate = useNavigate();
+
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
@@ -72,6 +82,37 @@ function OTPInput() {
 
     async function onSubmit(values: z.infer<typeof formSchema>) {
         console.log(values);
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('http://localhost:3000/api/verify-otp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email,
+                    otp: values.pin }),
+            });
+
+            const responseText = await response.text();
+
+            if (!response.ok) {
+
+                if (response.status === 400) {
+                    toast.error("Invalid OTP");
+                }
+
+                throw new Error(responseText);
+            }
+
+            toast.success("Verification Successfull");
+
+            navigate("/dashboard");
+        } catch (error) {
+            console.error("Verification failed", error);
+            setIsLoading(false);
+        }
     }
 
     return (
@@ -101,8 +142,15 @@ function OTPInput() {
                     )}
                 />
 
-                <Button type="submit" className="mt-7 w-full">
-                    Verify
+                <Button type="submit" disabled={isLoading} className="mt-7 w-full">
+                    {isLoading ? (
+                        <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing Up...
+                        </>
+                    ) : (
+                        "Sign Up"
+                    )}
                 </Button>
             </form>
         </Form>

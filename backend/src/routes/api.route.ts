@@ -16,8 +16,6 @@ router.post('/create-user', async (req: Request, res: Response) => {
     try {
         const { values } = req.body;
 
-        console.log(values);
-
         if (!values.email) {
             return res.status(400).send("Email is required");
         }
@@ -81,6 +79,28 @@ router.post('/create-user', async (req: Request, res: Response) => {
         console.error(error);
         res.status(500).send('Server Error');
     }
+});
+
+router.post('/verify-otp', async (req: Request, res: Response) => {
+    try {
+        const { email, otp } = req.body;
+
+        if (!otp || !email) {
+            return res.status(400).send({ message: "6 digits are required" });
+        }
+
+        const verifyOtp = await pool.query(`SELECT otp FROM users WHERE email = $1`, [email]);
+
+        if (verifyOtp.rows[0].otp !== otp) {
+            return res.status(400).send("Invalid OTP");
+        }
+
+        return res.status(200).send("Verification Successfull");
+
+    } catch (error) {
+        console.error("Failed to verify otp ", error);
+    }
+
 });
 
 export default router;
