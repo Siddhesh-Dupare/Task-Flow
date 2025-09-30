@@ -8,6 +8,7 @@ import SignIn from './pages/SignIn';
 import Verification from './pages/verification';
 import AccountDetails from './pages/AccountDetails';
 import CreateSite from './pages/CreateSite';
+import Dashboard from './pages/Dashboard';
 
 import { Toaster } from './components/ui/sonner';
 
@@ -24,6 +25,7 @@ function App() {
             <Route path="/verification" element= { <Verification /> } />
             <Route path="/account-details" element={ <AccountDetails /> } />
             <Route path="/create-site" element={ <CreateSite /> } />
+            <Route path="/dashboard" element={ <Dashboard /> } />
 
           </Routes>
 

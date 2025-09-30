@@ -64,7 +64,7 @@ const AccountDetails = () => {
                 throw new Error(responseText);
             }
 
-            navigate("/create-site");
+            navigate("/dashboard");
             toast.success("Account details stored");
             
         } catch (error) {
