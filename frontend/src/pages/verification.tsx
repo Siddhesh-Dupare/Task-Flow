@@ -108,7 +108,7 @@ function OTPInput() {
 
             toast.success("Verification Successfull");
 
-            navigate("/dashboard");
+            navigate("/account-details");
         } catch (error) {
             console.error("Verification failed", error);
             setIsLoading(false);

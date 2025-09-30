@@ -1,11 +1,19 @@
-import { Router, Request, Response } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { MailerSend, EmailParams, Sender, Recipient } from "mailersend";
 
 import crypto from "crypto";
+import bcrypt from "bcrypt";
 
 import pool from "../database.js";
 
 const router = Router();
+
+export const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+    if (req.isAuthenticated()) {
+        return next();
+    }
+    res.status(401).json({ message: 'Authentication required' });
+}
 
 function generate6DigitNumber() {
   return Math.floor(100000 + Math.random() * 900000);
@@ -81,6 +89,7 @@ router.post('/create-user', async (req: Request, res: Response) => {
     }
 });
 
+// Verify user OTP
 router.post('/verify-otp', async (req: Request, res: Response) => {
     try {
         const { email, otp } = req.body;
@@ -89,11 +98,13 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
             return res.status(400).send({ message: "6 digits are required" });
         }
 
-        const verifyOtp = await pool.query(`SELECT otp FROM users WHERE email = $1`, [email]);
+        const user = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
 
-        if (verifyOtp.rows[0].otp !== otp) {
+        if (user.rows[0].otp !== otp) {
             return res.status(400).send("Invalid OTP");
         }
+
+        await pool.query(`UPDATE users SET otp = $1, otp_expires_at = $2, is_verified = $3 WHERE user_id = $4`, [null, null, true, user.rows[0].user_id]);
 
         return res.status(200).send("Verification Successfull");
 
@@ -101,6 +112,54 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
         console.error("Failed to verify otp ", error);
     }
 
+});
+
+// Account details
+router.post('/account-details', async (req: Request, res: Response) => {
+    try {
+        const { email, name, password } = req.body;
+
+        if (!email || !name || !password) {
+            return res.status(400).send({ message: "name and password is required" });
+        }
+
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        await pool.query(`UPDATE users SET full_name = $1, password = $2 WHERE email = $3`, [name, hashedPassword, email]);
+
+        return res.status(200).send("Successfully Account is created");
+    } catch (error) {
+        console.error("Failed to create account", error);
+    }
+});
+
+// Site creation
+router.post('/create-site', async (req: Request, res: Response) => {
+    const { email, workspace } = req.body;
+
+    if (!email || !workspace) {
+        return res.status(400).send({ message: "Site name is essential" });
+    }
+
+    try {
+        // If Existing site
+        const existingOwnerId = await pool.query(`SELECT owner_id FROM workspace WHERE name = $1`, [workspace]);
+        if (existingOwnerId.rows.length > 0) {
+            return res.status(409).json({ message: "Site already exists." });
+        }
+
+        const workspaceSubdomain = workspace + 'workspace';
+
+        const user = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+
+        const createWorkspace = await pool.query(`INSERT INTO workspace (name, subdomain, owner_id) VALUES ($1, $2, $3)`, [workspace, workspaceSubdomain, user.rows[0].user_id]);
+
+        res.send(createWorkspace);
+
+    } catch (error) {
+        console.error("Failed to create site", error);
+    }
 });
 
 export default router;
