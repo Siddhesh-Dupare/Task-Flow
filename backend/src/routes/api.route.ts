@@ -5,15 +5,11 @@ import crypto from "crypto";
 import bcrypt from "bcrypt";
 
 import pool from "../database.js";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const router = Router();
-
-export const ensureAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated()) {
-        return next();
-    }
-    res.status(401).json({ message: 'Authentication required' });
-}
 
 function generate6DigitNumber() {
   return Math.floor(100000 + Math.random() * 900000);
@@ -21,15 +17,17 @@ function generate6DigitNumber() {
 
 // For SignUp page
 router.post('/create-user', async (req: Request, res: Response) => {
-    try {
-        const { values } = req.body;
 
-        if (!values.email) {
+    console.log(req.body);
+    try {
+        const { email } = req.body;
+
+        if (!email) {
             return res.status(400).send("Email is required");
         }
 
         // check if user exists
-        const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [values.email]);
+        const existingUser = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
 
         if (existingUser.rows.length > 0) {
             return res.status(409).send("User with this email already exists.");
@@ -42,7 +40,7 @@ router.post('/create-user', async (req: Request, res: Response) => {
         // Store new users
         const newUser = await pool.query(
             'INSERT INTO users (user_id, email, otp, otp_expires_at) VALUES ($1, $2, $3, $4) RETURNING *',
-            [randomUID, values.email, otp, otpExpiration]
+            [randomUID, email, otp, otpExpiration]
         );
 
         const mailerSend = new MailerSend({
@@ -53,7 +51,7 @@ router.post('/create-user', async (req: Request, res: Response) => {
         const sentFrom = new Sender("info@test-r9084zv9v2egw63d.mlsender.net", "Task Flow");
 
         const recipients = [
-            new Recipient(values.email)
+            new Recipient(email)
         ];
 
         const emailParams = new EmailParams()
@@ -116,6 +114,7 @@ router.post('/verify-otp', async (req: Request, res: Response) => {
 
 // Account details
 router.post('/account-details', async (req: Request, res: Response) => {
+    console.log(req.body);
     try {
         const { email, name, password } = req.body;
 
@@ -131,6 +130,25 @@ router.post('/account-details', async (req: Request, res: Response) => {
         return res.status(200).send("Successfully Account is created");
     } catch (error) {
         console.error("Failed to create account", error);
+    }
+});
+
+router.post('/projects', async (req: Request, res: Response) => {
+
+    try {
+        const { email, projectName, projectKey, boardType} = req.body;
+
+        if (!email || !projectName || !projectKey || !boardType) {
+        return res.status(400).json({ message: "App parameters are required" });
+    }
+        const user = await pool.query(`SELECT * FROM users WHERE email = $1`, [email]);
+        const workspace = await pool.query(`SELECT * FROM workspace WHERE owner_id = $1`, [user.rows[0].user_id]);
+
+        await pool.query(`INSERT INTO projects (name, project_key, board_type, workspace_id, owner_id) VALUES ($1, $2, $3, $4, $5)`, [projectName, projectKey, boardType, workspace.rows[0].id, user.rows[0].user_id]);
+
+        return res.status(200).json({ message: "Project successfully created" });
+    } catch (error) {
+        console.error("Failed to create project", error);
     }
 });
 

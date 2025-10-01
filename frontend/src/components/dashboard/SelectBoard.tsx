@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 import { useForm } from "react-hook-form";
+import { useAuth } from "@/hooks/AuthContext";
 
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -45,6 +46,7 @@ type BoardSelectionProps = {
 
 const BoardSelection: React.FC<BoardSelectionProps> = ({ title, desc }) => {
 
+    const { email } = useAuth();
     const navigate = useNavigate();
 
     const form = useForm<z.infer<typeof boardSchema>>({
@@ -66,9 +68,14 @@ const BoardSelection: React.FC<BoardSelectionProps> = ({ title, desc }) => {
             const response = await fetch('http://localhost:3000/api/projects', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ projectName: values.name, projectKey: values.key, boardType: values.boardType }),
+                body: JSON.stringify({
+                    email, 
+                    projectName: values.name, 
+                    projectKey: values.key, 
+                    boardType: values.boardType 
+                }),
             });
+
             const result = await response.json();
             if (!response.ok) {
                 throw new Error(result.message || 'Project creation failed.');

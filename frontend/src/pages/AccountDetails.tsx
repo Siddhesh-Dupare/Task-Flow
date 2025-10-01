@@ -45,6 +45,9 @@ const AccountDetails = () => {
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         setIsLoading(true);
 
+        console.log(values);
+        console.log(email);
+
         try {
             const response = await fetch('http://localhost:3000/api/account-details', {
                 method: 'POST',
@@ -64,7 +67,7 @@ const AccountDetails = () => {
                 throw new Error(responseText);
             }
 
-            navigate("/dashboard");
+            navigate("/create-site");
             toast.success("Account details stored");
             
         } catch (error) {
