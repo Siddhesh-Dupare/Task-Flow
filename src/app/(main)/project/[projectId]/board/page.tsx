@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 
 import { Search, ChevronRight, Plus, ArrowUp, ArrowDown, MoreHorizontal, Calendar } from "lucide-react";
 
-import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { DndContext, closestCenter, DragEndEvent, PointerSensor, useSensor, useSensors, DragStartEvent, DragOverlay } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useDroppable } from "@dnd-kit/core";
 import { useSortable } from "@dnd-kit/sortable";
@@ -70,11 +70,13 @@ function IssueCard({ issue, onCardClick }: { issue: { id: string; title: string;
     setNodeRef,
     transform,
     transition,
+    isDragging,
   } = useSortable({ id: issue.id });
 
   const style = {
   transform: CSS.Translate.toString(transform),
   transition,
+  opacity: isDragging ? 0.5 : 1,
 };
   
   const priorityIcons = {
@@ -115,10 +117,17 @@ function IssueCard({ issue, onCardClick }: { issue: { id: string; title: string;
 
 // Sub-component for a single column
 function BoardColumn({ column, onSelectIssue }: { column: { id: string; title: string; issues: any[] }, onSelectIssue: (issue: any) => void }) {
-    const { setNodeRef } = useDroppable({ id: column.id });
+    const { setNodeRef, isOver } = useDroppable({ id: column.id });
     const issueIds = column.issues.map(issue => issue.id);
   return (
-    <div className="w-72 flex-shrink-0 bg-muted rounded-lg p-3">
+    <div 
+      ref={setNodeRef} 
+      className={`
+        w-72 flex-shrink-0 bg-muted rounded-lg p-3
+        transition-colors duration-200 ease-in-out
+        ${isOver ? 'bg-primary/10' : ''}
+      `}
+    >
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-md">{column.title}</h3>
         <Badge variant="secondary">{column.issues.length}</Badge>
@@ -138,6 +147,7 @@ function BoardColumn({ column, onSelectIssue }: { column: { id: string; title: s
 export default function ProjectBoardPage() {
   const { projectType, projectName, sprint, columns, assignees } = mockData;
   const [selectedIssue, setSelectedIssue] = useState<any | null>(null);
+  const [activeIssue, setActiveIssue] = useState<any | null>(null);
 
   const [boardData, setBoardData] = useState(mockData);
 
@@ -150,60 +160,69 @@ export default function ProjectBoardPage() {
     })
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    // Find the full issue object from our data
+    const issue = boardData.columns
+      .flatMap(col => col.issues)
+      .find(iss => iss.id === active.id);
+    setActiveIssue(issue || null);
+  };
+
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (!over) return; // Dropped outside a valid column
+    if (!over) return;
 
     const activeId = active.id;
     const overId = over.id;
 
-    if (activeId === overId) return; // Dropped in the same place
+    if (activeId === overId) return;
 
     setBoardData((prev) => {
-      const activeColumnIndex = prev.columns.findIndex(col => col.issues.some(issue => issue.id === activeId));
-      const overColumnIndex = prev.columns.findIndex(col => col.id === overId || col.issues.some(issue => issue.id === overId));
+        const newColumns = prev.columns.map(col => ({ ...col, issues: [...col.issues] }));
 
-      if (activeColumnIndex === -1 || overColumnIndex === -1) {
-        return prev;
-      }
-      
-      const activeColumn = prev.columns[activeColumnIndex];
-      const overColumn = prev.columns[overColumnIndex];
+        // Find the active card's column and index
+        const activeColumn = newColumns.find(col => col.issues.some(issue => issue.id === activeId));
+        if (!activeColumn) return prev;
+        const activeIssueIndex = activeColumn.issues.findIndex(issue => issue.id === activeId);
+        const activeIssue = activeColumn.issues[activeIssueIndex];
 
-      const activeIssueIndex = activeColumn.issues.findIndex(issue => issue.id === activeId);
-      const activeIssue = { ...activeColumn.issues[activeIssueIndex] };
+        // Find the target column and index (where the card was dropped)
+        let overColumn = newColumns.find(col => col.id === overId);
+        if (!overColumn) {
+            overColumn = newColumns.find(col => col.issues.some(issue => issue.id === overId));
+        }
+        if (!overColumn) return prev;
 
-      const newColumns = [...prev.columns];
+        // --- Logic for SAME column reordering ---
+        if (activeColumn.id === overColumn.id) {
+            const overIssueIndex = overColumn.issues.findIndex(issue => issue.id === overId);
+            if (activeIssueIndex !== overIssueIndex) {
+                overColumn.issues = arrayMove(overColumn.issues, activeIssueIndex, overIssueIndex);
+            }
+        } 
+        // --- Logic for DIFFERENT column moving ---
+        else {
+            // Remove from old column
+            activeColumn.issues.splice(activeIssueIndex, 1);
 
-      // Remove from the old column
-      newColumns[activeColumnIndex] = {
-        ...activeColumn,
-        issues: activeColumn.issues.filter(issue => issue.id !== activeId)
-      };
-      
-      // Add to the new column
-      let overIssueIndex = overColumn.issues.findIndex(issue => issue.id === overId);
-      // If dropping on a column, not an issue, add to the end
-      if (overIssueIndex === -1) {
-          overIssueIndex = overColumn.issues.length;
-      }
+            // Add to new column
+            let overIssueIndex = overColumn.issues.findIndex(issue => issue.id === overId);
+            // If dropped on column, not issue, add to the end
+            if (overIssueIndex === -1) {
+                overIssueIndex = overColumn.issues.length;
+            }
+            overColumn.issues.splice(overIssueIndex, 0, activeIssue);
+        }
 
-      newColumns[overColumnIndex] = {
-        ...overColumn,
-        issues: [
-          ...overColumn.issues.slice(0, overIssueIndex),
-          activeIssue,
-          ...overColumn.issues.slice(overIssueIndex)
-        ]
-      };
-      
-      return { ...prev, columns: newColumns };
+        setActiveIssue(null);
+        return { ...prev, columns: newColumns };
     });
-  };
+};
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
     <div className="flex flex-col h-full">
       {/* Board Header */}
       <header className="p-4 border-b">
@@ -360,6 +379,9 @@ export default function ProjectBoardPage() {
       </SheetContent>
     </Sheet>
     </div>
+    <DragOverlay>
+        {activeIssue ? <IssueCard issue={activeIssue} onCardClick={() => {}} /> : null}
+      </DragOverlay>
     </DndContext>
   );
 }
