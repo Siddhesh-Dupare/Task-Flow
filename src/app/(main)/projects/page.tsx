@@ -21,8 +21,27 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectValue, SelectItem, SelectContent } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage } from "@/components/ui/form";
+
+import { z } from 'zod';
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 
 import { ArrowLeft } from "lucide-react";
+
+const formSchema = z.object({
+  projectName: z.string().min(2, {
+    message: "Project name must be at least 2 characters.",
+  }),
+  template: z.enum(["Kanban", "Scrum"]),
+  key: z.string().min(2, {
+    message: "Key must be at least 2 characters.",
+  }).max(5, {
+    message: "Key must not be longer than 5 characters.",
+  }).refine(s => s === s.toUpperCase(), {
+    message: "Key must be uppercase."
+  }),
+});
 
 // Mock data for projects. In a real app, you would fetch this from your database.
 const mockProjects = [
@@ -48,14 +67,29 @@ function CreateProjectDialog() {
   // State to manage the current view ('selection' or 'details')
   const [step, setStep] = useState<'selection' | 'details'>('selection');
   // State to store the chosen template
-  const [selectedTemplate, setSelectedTemplate] = useState<'Kanban' | 'Scrum'>('Kanban');
 
   // Function to handle moving back to the selection view
   const handleBack = () => setStep('selection');
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      projectName: "",
+      template: "Kanban",
+      key: "",
+    },
+  });
+
+  function onSubmit(values: z.infer<typeof formSchema>) {
+    // Do something with the form values.
+    // ✅ This will be type-safe and validated.
+    console.log(values);
+    // Here you would typically call an API to create the project.
+  }
   
   // Function to handle selecting a template
   const handleTemplateSelect = (template: 'Kanban' | 'Scrum') => {
-    setSelectedTemplate(template);
+    form.setValue("template", template);
     setStep('details');
   };
 
@@ -74,49 +108,48 @@ function CreateProjectDialog() {
                 Choose a template to get started with a new project.
               </DialogDescription>
             </DialogHeader>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              {/* Kanban Card */}
+              {/* Your Kanban Card code with the onClick handler */}
               <div
                 onClick={() => handleTemplateSelect('Kanban')}
                 className="border rounded-lg p-6 flex flex-col gap-4 cursor-pointer transition-all hover:border-primary hover:shadow-lg"
               >
-                <div className="h-32 bg-muted rounded-md flex items-center justify-center p-4">
-                  {/* Visual representation of a Kanban board */}
-                  <div className="w-full h-full bg-blue-500 rounded-sm flex items-center gap-2 p-2">
-                    <div className="h-full w-1/3 bg-slate-100/80 rounded-sm"></div>
-                    <div className="h-full w-1/3 bg-slate-100/80 rounded-sm flex flex-col gap-1">
-                        <div className="h-1/2 w-full bg-lime-300 rounded-sm"></div>
-                        <div className="h-1/2 w-full bg-lime-300 rounded-sm"></div>
+                 <div className="h-32 bg-muted rounded-md flex items-center justify-center p-4">
+                  <div className="w-full h-full bg-blue-600 rounded-sm flex items-center gap-2 p-2 shadow-inner">
+                    <div className="h-full w-1/3 bg-background/80 rounded-sm p-1 flex flex-col gap-1">
+                      <div className="h-4 w-full bg-blue-300 rounded-sm"></div>
                     </div>
-                    <div className="h-full w-1/3 bg-slate-100/80 rounded-sm"></div>
+                    <div className="h-full w-1/3 bg-background/80 rounded-sm p-1 flex flex-col gap-1">
+                      <div className="h-4 w-full bg-green-300 rounded-sm"></div>
+                      <div className="h-4 w-full bg-green-300 rounded-sm"></div>
+                    </div>
+                    <div className="h-full w-1/3 bg-background/80 rounded-sm p-1">
+                      <div className="h-4 w-full bg-yellow-300 rounded-sm"></div>
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold">Kanban</h3>
-                    <Badge variant="outline">LAST CREATED</Badge>
+                  <h3 className="text-lg font-semibold">Kanban</h3>
+                  <Badge variant="secondary">SIMPLE</Badge>
                 </div>
-                <p className="text-sm text-muted-foreground">...</p>
+                <p className="text-sm text-muted-foreground">Visualize and optimize your workflow with a continuous flow of tasks.</p>
               </div>
-              
-              {/* CORRECTED: Scrum Card */}
+
+              {/* Your Scrum Card code with the onClick handler */}
               <div
                 onClick={() => handleTemplateSelect('Scrum')}
                 className="border rounded-lg p-6 flex flex-col gap-4 cursor-pointer transition-all hover:border-primary hover:shadow-lg"
               >
-                {/* The visual container needs 'relative' for the absolute positioned dots to work correctly */}
-                <div className="h-32 bg-muted rounded-md flex items-center justify-center p-4 relative">
-                    {/* All visual elements are now properly nested inside the visual container */}
-                    <div className="absolute h-20 w-20 border-4 border-dashed border-purple-400 rounded-full"></div>
-                    <div className="h-10 w-10 bg-purple-500 rounded-md flex items-center justify-center text-white font-bold">[]</div>
-                    <div className="absolute h-3 w-3 bg-red-500 rounded-full top-6 right-10"></div>
-                    <div className="absolute h-3 w-3 bg-blue-500 rounded-full top-10 left-10"></div>
-                    <div className="absolute h-3 w-3 bg-yellow-500 rounded-full bottom-6 right-12"></div>
-                    <div className="absolute h-3 w-3 bg-green-500 rounded-full bottom-8 left-14"></div>
+                <div className="h-32 bg-muted rounded-md flex items-center justify-center p-4 relative overflow-hidden">
+                  <div className="absolute h-24 w-24 border-4 border-dashed border-purple-400 rounded-full animate-spin [animation-duration:10s]"></div>
+                  <div className="h-10 w-10 bg-purple-500 rounded-md flex items-center justify-center text-white font-bold shadow-lg">[]</div>
                 </div>
                 <h3 className="text-lg font-semibold">Scrum</h3>
-                <p className="text-sm text-muted-foreground">...</p>
+                <p className="text-sm text-muted-foreground">Plan, execute, and deliver work in structured sprints or iterations.</p>
               </div>
             </div>
+
           </>
         ) : (
           <>
@@ -133,46 +166,72 @@ function CreateProjectDialog() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="grid grid-cols-2 gap-8 py-4 px-12">
-              {/* Left Side: Form Fields */}
-              <div className="flex flex-col gap-6">
-                <div>
-                  <Label htmlFor="project-name">Project name *</Label>
-                  <Input id="project-name" placeholder="e.g. Marketing Campaign" className="mt-2"/>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    This will be the name of your new project.
-                  </p>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-2 gap-8 py-4 px-12">
+                <div className="flex flex-col gap-6">
+                  <FormField
+                    control={form.control}
+                    name="projectName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Project name *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. Marketing Campaign" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          This will be the name of your new project.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="template"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Template</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a template" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="Kanban">Kanban</SelectItem>
+                            <SelectItem value="Scrum">Scrum</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          This determines the board type for your project.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="key"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Key *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="e.g. MKT" {...field} />
+                        </FormControl>
+                        <FormDescription>
+                          A short, unique, uppercase identifier for your project.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <Button type="submit" className="w-fit">Create Project</Button>
                 </div>
-                <div>
-                  <Label>Template</Label>
-                   <Select value={selectedTemplate} onValueChange={(val: 'Kanban' | 'Scrum') => setSelectedTemplate(val)}>
-                      <SelectTrigger className="mt-2">
-                        <SelectValue placeholder="Select a template" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Kanban">Kanban</SelectItem>
-                        <SelectItem value="Scrum">Scrum</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    This determines the board type for your project.
-                  </p>
-                </div>
-                <div>
-                  <Label htmlFor="project-key">Key *</Label>
-                  <Input id="project-key" placeholder="e.g. MKT" className="mt-2"/>
-                   <p className="text-sm text-muted-foreground mt-1">
-                    A short, unique identifier for your project.
-                  </p>
-                </div>
-                 <Button type="submit" className="w-fit">Create Project</Button>
-              </div>
-
-              {/* Right Side: Visual Placeholder */}
-              <div className="bg-slate-900 rounded-lg flex items-center justify-center p-8">
+                <div className="bg-slate-900 rounded-lg flex items-center justify-center p-8">
                   <div className="w-full h-32 bg-slate-800 rounded-md border border-slate-700"></div>
-              </div>
-            </div>
+                </div>
+              </form>
+            </Form>
           </>
         )}
       </DialogContent>
