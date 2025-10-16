@@ -14,12 +14,11 @@ import { User, Mail, Lock, Eye, EyeOff, CheckCircle, CircleDot } from 'lucide-re
 import { FaGoogle } from "react-icons/fa";
 import { FaGithub } from "react-icons/fa";
 
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth"; 
-import { auth } from "@/lib/firebase";
-
 import { Loader2 } from "lucide-react"; 
 
 import { toast } from 'sonner';
+
+import { supabase } from '@/lib/supabaseClient';
 
 import Link from 'next/link';
 
@@ -44,8 +43,7 @@ const formSchema = z.object({
 const SignUpForm: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const provider = new GoogleAuthProvider();
+  const router = useRouter();
 
   const PasswordValidationItem: React.FC<{ isValid: boolean; text: string }> = ({ isValid, text }) => (
     
@@ -75,77 +73,56 @@ const SignUpForm: React.FC = () => {
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsLoading(true);
     try {
-    const response = await fetch('http://localhost:3001/api/signup', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        fullName: values.name,
+      const { data, error } = await supabase.auth.signUp({
         email: values.email,
         password: values.password,
-      }),
-    });
-
-    const data = await response.json();
-
-    // 2. Handle a failed response from the server
-    if (!response.ok) {
-      // If the server returns an error message, throw it to the catch block
-      if (response.status === 409) {
-        throw new Error('Email is already in use.');
-      } 
-      throw new Error(data.message || 'Something went wrong!');
-    }
-
-    // 3. Handle a successful response
-    toast.success("Account created successfully!");
-    
-    // Optional: Redirect the user to the sign-in page after success
-    const router = useRouter();
-    router.push('/sign-in');
-
-  } catch (error: any) {
-    // 4. Catch any errors (network error or error thrown from above)
-    console.error("Sign-up failed:", error);
-    toast.error(error.message);
-  } finally {
-    setIsLoading(false);
-  }
-  };
-
-  const handleGoogleSignIn = async () => {
-    console.log("Google Sign-In initiated");
-    try {
-      // 1. User signs in with Google on the client
-      const result = await signInWithPopup(auth, provider);
-      
-      // 2. Get the ID token from the result
-      const idToken = await result.user.getIdToken();
-
-      // 3. Send the token to your backend API
-      const response = await fetch('http://localhost:3001/api/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+        options: {
+          data: {
+            full_name: values.name,
+          },
         },
-        body: JSON.stringify({ idToken: idToken }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Google Sign-In failed.');
+      if (error) {
+        // Throw the error to be caught by the catch block
+        throw error;
       }
 
-      const data = await response.json();
-      console.log('Backend authentication successful:', data);
-      // Now you can redirect the user or update the UI
+      // Supabase sends a confirmation email by default
+      toast.success("Account created!", {
+        description: "Please check your email to verify your account.",
+      });
+      
+      // Redirect to a page that tells the user to check their email
+      router.push('/auth/verify-email');
 
-    } catch (error) {
-      console.error("Error during Google Sign-In:", error);
-      // Show an error message to the user
+    } catch (error: any) {
+      console.error("Sign-up failed:", error);
+      toast.error(error.message || "An unexpected error occurred.");
+    } finally {
+      setIsLoading(false);
     }
-  }
+  };
+
+  const handleSocialSignIn = async (provider: 'google' | 'github') => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: provider,
+        options: {
+          redirectTo: `${location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) throw error;
+
+    } catch (error: any) {
+      toast.error(error.message || `Failed to sign in with ${provider}`);
+      setIsLoading(false);
+    }
+    // Note: We don't set isLoading to false in the `finally` block here
+    // because the user will be redirected to the provider's page.
+  };
 
   return (
     <div className="w-full max-w-md mx-auto p-8 bg-white rounded-lg shadow-xl">
@@ -254,10 +231,10 @@ const SignUpForm: React.FC = () => {
 
       {/* Sign Up Button and Social Logins */}
       <div className="flex space-x-3 justify-center mt-2">
-        <Button variant="outline" size="icon" className="border-gray-300 h-10 w-10" onClick={handleGoogleSignIn}>
+        <Button variant="outline" size="icon" className="border-gray-300 h-10 w-10" onClick={() => handleSocialSignIn('google')}>
           <FaGoogle className="h-5 w-5 text-blue-600" />
         </Button>
-        <Button variant="outline" size="icon" className="border-gray-300 h-10 w-10">
+        <Button variant="outline" size="icon" className="border-gray-300 h-10 w-10" onClick={() => handleSocialSignIn('github')}>
           <FaGithub className="h-5 w-5 text-red-500" /> {/* Or use a custom Google SVG */}
         </Button>
       </div>
