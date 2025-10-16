@@ -9,14 +9,13 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+
+import { Badge } from "@/components/ui/badge";
 
 // Mock data for projects. In a real app, you would fetch this from your database.
 const mockProjects = [
@@ -44,30 +43,53 @@ function CreateProjectDialog() {
       <DialogTrigger asChild>
         <Button>Create Project</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      {/* Increased the max-width for the larger dialog */}
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>Create Project</DialogTitle>
+          <DialogTitle className="text-2xl">Create project</DialogTitle>
           <DialogDescription>
-            Give your new project a name and a unique key. Click create when you're done.
+            Choose a template to get started with a new project.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
-            <Input id="name" placeholder="E.g., Marketing Campaign" className="col-span-3" />
+        
+        {/* Container for the template selection cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+          
+          {/* Kanban Card */}
+          <div className="border rounded-lg p-6 flex flex-col gap-4 cursor-pointer transition-all hover:border-primary hover:shadow-lg">
+            <div className="h-32 bg-muted rounded-md flex items-center justify-center p-4">
+              {/* Visual representation of a Kanban board */}
+              <div className="w-full h-full bg-blue-500 rounded-sm flex items-center gap-2 p-2">
+                <div className="h-full w-1/3 bg-slate-100/80 rounded-sm"></div>
+                <div className="h-full w-1/3 bg-slate-100/80 rounded-sm flex flex-col gap-1">
+                    <div className="h-1/2 w-full bg-lime-300 rounded-sm"></div>
+                    <div className="h-1/2 w-full bg-lime-300 rounded-sm"></div>
+                </div>
+                <div className="h-full w-1/3 bg-slate-100/80 rounded-sm"></div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold">Kanban</h3>
+                <Badge variant="outline">LAST CREATED</Badge>
+            </div>
+            <p className="text-sm text-muted-foreground">...</p>
           </div>
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="key" className="text-right">
-              Key
-            </Label>
-            <Input id="key" placeholder="E.g., MKT" className="col-span-3" />
+
+          {/* Scrum Card */}
+          <div className="border rounded-lg p-6 flex flex-col gap-4 cursor-pointer transition-all hover:border-primary hover:shadow-lg">
+             <div className="h-32 bg-muted rounded-md flex items-center justify-center p-4 relative">
+                {/* Visual representation of a Scrum cycle */}
+                <div className="absolute h-20 w-20 border-4 border-dashed border-purple-400 rounded-full"></div>
+                <div className="h-10 w-10 bg-purple-500 rounded-md flex items-center justify-center text-white font-bold">[]</div>
+                <div className="absolute h-3 w-3 bg-red-500 rounded-full top-6 right-10"></div>
+                <div className="absolute h-3 w-3 bg-blue-500 rounded-full top-10 left-10"></div>
+                <div className="absolute h-3 w-3 bg-yellow-500 rounded-full bottom-6 right-12"></div>
+                <div className="absolute h-3 w-3 bg-green-500 rounded-full bottom-8 left-14"></div>
+             </div>
+            <h3 className="text-lg font-semibold">Scrum</h3>
+            <p className="text-sm text-muted-foreground">...</p>
           </div>
         </div>
-        <DialogFooter>
-          <Button type="submit">Create</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
